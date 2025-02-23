@@ -85,3 +85,19 @@
       )
     )
   )
+
+;Punto 17
+
+(define multParejas
+  (lambda (P1 P2)
+    (list (* (car P1) (car P2)) (* (cadr P1) (cadr P2)))
+    )
+  )
+
+(define prod-scalar-matriz
+  (lambda (mat vec)
+    (if (null? mat) empty
+        (cons (multParejas (car mat) vec) (prod-scalar-matriz (cdr mat) vec))
+        )
+    )
+  )
