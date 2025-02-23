@@ -64,3 +64,24 @@
     (list (count-even-all arbol) (count-odd-all arbol))
     )
   )
+
+;Punto 16
+(define recogSymbol
+  (lambda (symbol)
+    (cond
+      [(eq? symbol 'suma) +]
+      [(eq? symbol 'resta) -]
+      [else *]
+      )
+    )
+  )
+
+(define Operar-binarias
+  (lambda (operacionB)
+    (cond
+      [(number? operacionB) operacionB]
+      [else ((recogSymbol (cadr operacionB)) (Operar-binarias (car operacionB))
+                                             (Operar-binarias (caddr operacionB)))]
+      )
+    )
+  )
