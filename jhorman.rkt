@@ -179,10 +179,9 @@
 
 ;; 18. pascal:
 ;; Propósito:
-;; n -> L: Procedimiento que recibe un número natural n y retorna la n-ésima fila del triángulo
-;; de pascal.
-;; Para los cálculos se hará uso del 0 pero cabe decir que este no hace parte del dominio del
-;; procedimiento.
+;; N -> L: Procedimiento que recibe un número natural N y retorna la N-ésima fila del triángulo
+;; de pascal. 
+;; Para los cálculos se hará uso del 0 pero este no hace parte del dominio del procedimiento.
 ;; <lista> := ({<natural>}+)
 ;; <natural> := 0 | 1 | 2 | ...
 
