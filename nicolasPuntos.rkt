@@ -31,6 +31,18 @@
     )
   )
 
+;Punto 12
+(define filter-acum
+  (lambda (a b F acum filter)
+    (if (> a b) acum
+        (cond
+          [(filter a) (filter-acum (+ a 1) b F (F acum a) filter )]
+          [else (filter-acum (+ a 1) b F acum filter)]
+          )
+        )
+    )
+  )
+
 ;Punto 15
 (define count-odd
   (lambda (num)
