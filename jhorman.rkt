@@ -47,6 +47,7 @@
   )
 )
 
+;; Pruebas
 (cartesian-product '(1 2 3 4) '(5 6 7 8))
 (cartesian-product '(a b c d) '(e f g h))
 (cartesian-product '(a) '(b c d))
@@ -72,6 +73,7 @@
   )
 )
 
+;; Pruebas
 (mapping (lambda (d) (* d 2)) '(1 2 3 4) '(2 4 6 8))
 (mapping (lambda (d) (/ d 2)) '(1 2 3 4) '(2 4 6 8))
 (mapping (lambda (d) d) '(1 2 3 4) '(1 2 3 4))
@@ -126,6 +128,7 @@
   )
 )
 
+;; Pruebas
 (inversions '(1 2 3))
 (inversions '(2 1 3 4))
 (inversions '(4 3 2 1))
@@ -168,6 +171,7 @@
   )
 )
 
+;; Pruebas
 (operate '() '(3))
 (operate (list + +) '(1 1 1))
 (operate (list + - * /) '(1 2 3 4 5))
@@ -239,6 +243,7 @@
   )
 )
 
+;; Pruebas
 (pascal 6)
 (pascal 7)
 (pascal 8)
