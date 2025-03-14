@@ -12,18 +12,20 @@
 
 
 (define PARSEBNF
-  (lambda (exp)
+  (lambda (datum)
     (cond
-      [(boolean? exp) exp]
-      [(symbol? exp) exp]
-      [(equal? (car exp) 'circuit) (circuit (PARSEBNF (circuit->gate_list exp)))]
-      [(equal? (car exp) 'gate_list)
-          (gate_list (myMap PARSEBNF (cdr exp)))
+      [(boolean? datum) datum]
+      [(symbol? datum) datum]
+      [(equal? (car datum) 'circuit) (circuit (PARSEBNF (circuit->gate_list datum)))]
+      [(equal? (car datum) 'empty_gate_list) (gate_list '())]
+      [(equal? (car datum) 'gate_list)
+        (gate_list (myMap PARSEBNF (cdr datum)))
       ]
-      [(equal? (car exp) 'gate) (gate (PARSEBNF (gate->gate_id exp)) (PARSEBNF (gate->type exp)) (PARSEBNF (gate->input_list exp)))]
-      [(equal? (car exp) 'type) (type (PARSEBNF (cadr exp)))]
-      [(equal? (car exp) 'input_list) 
-          (input_list (myMap PARSEBNF (cdr exp)))
+      [(equal? (car datum) 'gate) (gate (PARSEBNF (gate->gate_id datum)) (PARSEBNF (gate->type datum)) (PARSEBNF (gate->input_list datum)))]
+      [(equal? (car datum) 'type) (type (PARSEBNF (cadr datum)))]
+      [(equal? (car datum) 'empty_input_list) (input_list '())]
+      [(equal? (car datum) 'input_list) 
+        (input_list (myMap PARSEBNF (cdr datum)))
       ]
       [else 'error]
     )
@@ -42,8 +44,7 @@
   (lambda (l)
     (cond
       [(null? l) (list 'empty_gate_list)]
-      [(list? (cadr l)) (cons 'gate_list l)]
-      [else (list 'gate_list l)]
+      [else (cons 'gate_list l)]
     )
   )
 )
@@ -184,8 +185,34 @@
 
 ;; Pruebas
 
-(circuit (gate_list (gate 'G1 (type 'not) (input_list '(A)))))
-(circuit (gate_list (gate 'G1 (type 'and) (input_list '(A B)))))
+(define circuit1 (circuit 
+  (gate_list 
+    (list 
+      (gate 'G1 (type 'or) (input_list '(A B))) 
+      (gate 'G2 (type 'not) (input_list '(G1)))
+    )
+  )
+))
+
+(define gate_list1   (gate_list 
+    (list 
+      (gate 'G1 (type 'or) (input_list '(A B))) 
+      (gate 'G2 (type 'not) (input_list '(G1)))
+    )
+  ))
+
+(define gate1.1 (gate 'G1 (type 'or) (input_list '(A B))))
+
+(define gate1.2 (gate 'G2 (type 'not) (input_list '(G1))))
+
+(define circuit2 (circuit (gate_list (list (gate 'G1 (type 'and) (input_list '(A B)))))))
+
+(define gate_list2 (gate_list (list (gate 'G1 (type 'and) (input_list '(A B))))))
+
+(define gate2 (gate 'G1 (type 'and) (input_list '(A B))))
+
+(circuit (gate_list (list (gate 'G1 (type 'not) (input_list '(A))))))
+(circuit (gate_list (list (gate 'G1 (type 'and) (input_list '(A B))))))
 (circuit 
   (gate_list 
     (list 
@@ -204,7 +231,7 @@
     )
   )
 )
-(circuit->gate_list (circuit (gate_list (gate 'G1 (type 'not) (input_list '(A))))))
+(circuit->gate_list (circuit (gate_list (list (gate 'G1 (type 'not) (input_list '(A)))))))
 (gate_list->first
   (circuit->gate_list
     (circuit 
@@ -323,7 +350,7 @@
       (circuit->gate_list
         (circuit 
           (gate_list
-            (gate 'G1 (type 'or) (input_list '()))
+            (list (gate 'G1 (type 'or) (input_list '())))
           )
         )
       )
@@ -336,7 +363,7 @@
       (circuit->gate_list
         (circuit 
           (gate_list
-            (gate 'G1 (type 'or) (input_list '(A)))
+            (list (gate 'G1 (type 'or) (input_list '(A))))
           )
         )
       )
@@ -356,7 +383,7 @@
   (circuit->gate_list
     (circuit 
       (gate_list
-        (gate 'G1 (type 'or) (input_list '(A)))
+        (list (gate 'G1 (type 'or) (input_list '(A))))
       )
     )
   )
@@ -366,7 +393,7 @@
     (circuit->gate_list
       (circuit 
         (gate_list
-          (gate 'G1 (type 'or) '()) 
+          (list (gate 'G1 (type 'or) '())) 
         )
       )
     )
