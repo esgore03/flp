@@ -10,6 +10,26 @@
 ;; <input_list> ::= empty | <bool> <input_list> | <gate_ref> <input_list>
 ;; <gate ref> ::= identificador de otra compuerta
 
+
+(define PARSEBNF
+  (lambda (exp)
+    (cond
+      [(boolean? exp) exp]
+      [(symbol? exp) exp]
+      [(equal? (car exp) 'circuit) (circuit (PARSEBNF (circuit->gate_list exp)))]
+      [(equal? (car exp) 'gate_list)
+          (gate_list (myMap PARSEBNF (cdr exp)))
+      ]
+      [(equal? (car exp) 'gate) (gate (PARSEBNF (gate->gate_id exp)) (PARSEBNF (gate->type exp)) (PARSEBNF (gate->input_list exp)))]
+      [(equal? (car exp) 'type) (type (PARSEBNF (cadr exp)))]
+      [(equal? (car exp) 'input_list) 
+          (input_list (myMap PARSEBNF (cdr exp)))
+      ]
+      [else 'error]
+    )
+  )
+)
+
 ;; Constructores
 
 (define circuit
@@ -17,37 +37,6 @@
     (list 'circuit gate_list)
   )
 )
-
-(define andMap
-  (lambda (F L)
-    (if (null? L) 
-      #t
-      (and (F (car L)) (andMap F (cdr L)))
-    )
-  )
-)
-
-(define input_list?
-  (lambda (input_list)
-    (let ([first (input_list->first input_list)] [rest (input_list->rest input_list)])
-      (cond 
-        [(and (equal? (car input_list) 'empty_input_list) (null? (cdr input_list))) #t]
-        [(and (equal? (car input_list) 'input_list) (not (null? rest))) (symbol? first)]
-        [(equal? (car input_list) 'input_list) (and (symbol? first) (andMap symbol? rest))] 
-        [else #f]
-      )
-    )
-  )
-)
-
-(define gate?
-  (lambda (gate)
-    (let ([input_list (gate->input_list gate)])
-      (and (equal? (car gate) 'gate) (input_list? input_list))
-    )
-  )
-)
-
 
 (define gate_list
   (lambda (l)
@@ -123,7 +112,7 @@
 
 (define gate->type
   (lambda (gate)
-    (cadr (caddr gate))
+    (caddr gate)
   )
 ) 
 
@@ -154,17 +143,41 @@
 
 ;; Funciones Auxiliares
 
-;; appendAux:
-;; Propósito:
-;; L1, L2 -> L1 + L2: Procedimiento que toma dos listas y
-;; retorna la concatenación de ambas.
-;; <lista> := ()
-;;         := (<valor-de-scheme> <lista>)
+(define myMap
+  (lambda (F L)
+    (if (null? L) 
+      empty
+      (cons (F (car L)) (myMap F (cdr L)))
+    )
+  )
+)
 
-(define appendAux
-  (lambda (L1 L2)
-    (if (null? L1) L2
-      (cons (car L1) (appendAux (cdr L1) L2))
+(define andMap
+  (lambda (F L)
+    (if (null? L) 
+      #t
+      (and (F (car L)) (andMap F (cdr L)))
+    )
+  )
+)
+
+(define input_list?
+  (lambda (input_list)
+    (let ([first (input_list->first input_list)] [rest (input_list->rest input_list)])
+      (cond 
+        [(and (equal? (car input_list) 'empty_input_list) (null? (cdr input_list))) #t]
+        [(and (equal? (car input_list) 'input_list) (not (null? rest))) (symbol? first)]
+        [(equal? (car input_list) 'input_list) (and (symbol? first) (andMap symbol? rest))] 
+        [else #f]
+      )
+    )
+  )
+)
+
+(define gate?
+  (lambda (gate)
+    (let ([input_list (gate->input_list gate)])
+      (and (equal? (car gate) 'gate) (input_list? input_list))
     )
   )
 )
