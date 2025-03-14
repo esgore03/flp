@@ -62,17 +62,13 @@
 (define circuit3
   (make-circuit (a-gate-list 
     (make-gate 'G1 (or-type) (a-input-list (ref-input 'A) (a-input-list (ref-input 'B) (empty-input-list))))
-    (a-gate-list 
-      (make-gate 'G2 (not-type) (a-input-list (ref-input 'G1) (empty-input-list)))
-      (empty-gate-list)))))
+    (make-gate 'G2 (not-type) (a-input-list (ref-input 'G1) (empty-input-list)))
+    (empty-gate-list))))
 
 (define circuit4
   (make-circuit (a-gate-list 
     (make-gate 'G1 (or-type) (a-input-list (ref-input 'A) (a-input-list (ref-input 'B) (empty-input-list))))
-    (a-gate-list 
-      (make-gate 'G2 (and-type) (a-input-list (ref-input 'A) (a-input-list (ref-input 'B) (empty-input-list))))
-      (a-gate-list 
-        (make-gate 'G3 (not-type) (a-input-list (ref-input 'G2) (empty-input-list)))
-        (a-gate-list 
-          (make-gate 'G4 (and-type) (a-input-list (ref-input 'G1) (a-input-list (ref-input 'G3) (empty-input-list))))
-          (empty-gate-list)))))))
+    (make-gate 'G2 (and-type) (a-input-list (ref-input 'A) (a-input-list (ref-input 'B) (empty-input-list))))
+    (make-gate 'G3 (not-type) (a-input-list (ref-input 'G2) (empty-input-list)))
+    (make-gate 'G4 (and-type) (a-input-list (ref-input 'G1) (a-input-list (ref-input 'G3) (empty-input-list))))
+    (empty-gate-list))))
