@@ -41,7 +41,7 @@
 (define gate
   (lambda (gate_id type input_list)
     (if (null? input_list) 
-      (list 'gate gate_id type '('empty_input_list))
+      (list 'gate gate_id type (list 'empty_input_list))
       (list 'gate gate_id type input_list)
     )
   )
@@ -93,7 +93,7 @@
 (define gate_list->first
   (lambda (gate_list)
     (cond 
-      [(equal? (car gate_list) 'empty_gate_list) '('empty_gate_list)]
+      [(equal? (car gate_list) 'empty_gate_list) (list 'empty_gate_list)]
       [else (cadr gate_list)]
     )
   )
@@ -105,9 +105,9 @@
 (define gate_list->rest
   (lambda (gate_list)
     (cond 
-      [(equal? (car gate_list) 'empty_gate_list) '('empty_gate_list)]
-      [(null? (cddr gate_list)) '('empty_gate_list)]
-      [else (cddr gate_list)]
+      [(equal? (car gate_list) 'empty_gate_list) (list 'empty_gate_list)]
+      [(null? (cddr gate_list)) (list 'empty_gate_list)]
+      [else (cons 'gate_list (cddr gate_list))]
     )
   )
 )
@@ -145,7 +145,7 @@
 (define input_list->first
   (lambda (input_list)
     (cond 
-      [(equal? (car input_list) 'empty_input_list) '('empty_input_list)]
+      [(equal? (car input_list) 'empty_input_list) (list 'empty_input_list)]
       [else (cadr input_list)]
     )
   )
@@ -157,9 +157,9 @@
 (define input_list->rest
   (lambda (input_list)
     (cond 
-      [(equal? (car input_list) 'empty_input_list) '('empty_input_list)]
-      [(null? (cddr input_list)) '('empty_input_list)]
-      [else (cddr input_list)]
+      [(equal? (car input_list) 'empty_input_list) (list 'empty_input_list)]
+      [(null? (cddr input_list)) (list 'empty_input_list)]
+      [else (cons 'input_list (cddr input_list))]
     )
   )
 ) 
@@ -217,9 +217,9 @@
       [(equal? (car exp) 'circuit) (circuit (PARSEBNF (circuit->gate_list exp)))]
       [(equal? (car exp) 'empty_gate_list) (empty-gate-list)]
       [(equal? (car exp) 'gate_list)
-        (a-gate-list (PARSEBNF(gate_list->first exp)) (myMap PARSEBNF (gate_list->rest exp)))
+        (a-gate-list (PARSEBNF(gate_list->first exp)) (PARSEBNF(gate_list->rest exp)))
       ]
-      [(equal? (car exp) 'gate) (a-gate (PARSEBNF (gate->gate_id exp)) (PARSEBNF (gate->type exp)) (PARSEBNF (gate->input_list exp)))]
+      [(equal? (car exp) 'gate) (a-gate (gate->gate_id exp) (PARSEBNF (gate->type exp)) (PARSEBNF (gate->input_list exp)))]
       [(equal? (car exp) 'type)
         (cond
           [(equal? (cadr exp) 'or) (or-type)]
@@ -229,34 +229,16 @@
         )
       ]
       [(equal? (car exp) 'empty_input_list) (empty-input-list)]
-      [(or (equal? (car exp) 'input_list) (or (symbol? (car exp)) (boolean? (car exp))))
-        (a-input-list (PARSEBNF(input_list->first exp)) (myMap PARSEBNF (input_list->rest exp)))
-      ]
+      [(equal? (car exp) 'input_list) (a-input-list (PARSEBNF (input_list->first exp)) (PARSEBNF (input_list->rest exp)))]
       [else 'error]
     )
   )
 )
 
-;; Funciones Auxiliares
-
-;; myMap
-;; Propósito: Promedimiento que recibe una función unaria F, una lista L y retorna una lista con cada elemento
-;; de la lista de entrada evaluado en F.
-;; <lista> := (<función-unaria> <valor-de-scheme>)
-
-(define myMap
-  (lambda (F L)
-    (if (null? L) 
-      empty
-      (cons (F (car L)) (myMap F (cdr L)))
-    )
-  )
-)
-
-;; myMap
+;; andMap
 ;; Propósito: Promedimiento que recibe una función predicado unaria F, una lista L y retorna #t si todos
 ;; los elementos cumplen el predicado, #f en caso contrario.
-;; <lista> := (<función-unaria> <valor-de-scheme>)
+;; <lista> := (<valor-de-scheme>)
 
 (define andMap
   (lambda (F L)
