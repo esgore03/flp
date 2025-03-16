@@ -1,6 +1,6 @@
 #lang eopl
 
-;; Circuitos Lógicos
+;; Circuitos Lógicos Basados en Listas
 ;; Propósito: Implementar la interfaz del TAD de circuitos lógicos basandose en listas.
 ;; <circuit> ::= '(circuit <gate_list>)
 ;; <gate_list> ::= empty | <gate> <gate_list>
@@ -41,7 +41,7 @@
 (define gate
   (lambda (gate_id type input_list)
     (if (null? input_list) 
-      (list 'gate gate_id type '('empty_input_list))
+      (list 'gate gate_id type (list 'empty_input_list))
       (list 'gate gate_id type input_list)
     )
   )
@@ -93,7 +93,7 @@
 (define gate_list->first
   (lambda (gate_list)
     (cond 
-      [(equal? (car gate_list) 'empty_gate_list) '('empty_gate_list)]
+      [(equal? (car gate_list) 'empty_gate_list) (list 'empty_gate_list)]
       [else (cadr gate_list)]
     )
   )
@@ -105,9 +105,9 @@
 (define gate_list->rest
   (lambda (gate_list)
     (cond 
-      [(equal? (car gate_list) 'empty_gate_list) '('empty_gate_list)]
-      [(null? (cddr gate_list)) '('empty_gate_list)]
-      [else (cddr gate_list)]
+      [(equal? (car gate_list) 'empty_gate_list) (list 'empty_gate_list)]
+      [(null? (cddr gate_list)) (list 'empty_gate_list)]
+      [else (cons 'gate_list (cddr gate_list))]
     )
   )
 )
@@ -145,7 +145,7 @@
 (define input_list->first
   (lambda (input_list)
     (cond 
-      [(equal? (car input_list) 'empty_input_list) '('empty_input_list)]
+      [(equal? (car input_list) 'empty_input_list) (list 'empty_input_list)]
       [else (cadr input_list)]
     )
   )
@@ -157,12 +157,12 @@
 (define input_list->rest
   (lambda (input_list)
     (cond 
-      [(equal? (car input_list) 'empty_input_list) '('empty_input_list)]
-      [(null? (cddr input_list)) '('empty_input_list)]
-      [else (cddr input_list)]
+      [(equal? (car input_list) 'empty_input_list) (list 'empty_input_list)]
+      [(null? (cddr input_list)) (list 'empty_input_list)]
+      [else (cons 'input_list (cddr input_list))]
     )
   )
-) 
+)
 
 ;; Funciones Auxiliares
 
@@ -180,7 +180,7 @@
   )
 )
 
-;; myMap
+;; andMap
 ;; Propósito: Promedimiento que recibe una función predicado unaria F, una lista L y retorna #t si todos
 ;; los elementos cumplen el predicado, #f en caso contrario.
 ;; <lista> := (<función-unaria> <valor-de-scheme>)
