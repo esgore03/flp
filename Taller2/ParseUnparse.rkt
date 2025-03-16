@@ -214,7 +214,7 @@
     (cond
       [(boolean? exp) (bool-input exp)]
       [(symbol? exp) (ref-input exp)]
-      [(equal? (car exp) 'circuit) (circuit (PARSEBNF (circuit->gate_list exp)))]
+      [(equal? (car exp) 'circuit) (a-circuit (PARSEBNF (circuit->gate_list exp)))]
       [(equal? (car exp) 'empty_gate_list) (empty-gate-list)]
       [(equal? (car exp) 'gate_list)
         (a-gate-list (PARSEBNF(gate_list->first exp)) (PARSEBNF(gate_list->rest exp)))
