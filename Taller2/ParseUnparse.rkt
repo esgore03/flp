@@ -93,7 +93,7 @@
 (define gate_list->first
   (lambda (gate_list)
     (cond 
-      [(equal? (car gate_list) 'empty_gate_list) (list 'empty_gate_list)]
+      [(equal? (car gate_list) 'empty_gate_list) gate_list]
       [else (cadr gate_list)]
     )
   )
@@ -105,7 +105,7 @@
 (define gate_list->rest
   (lambda (gate_list)
     (cond 
-      [(equal? (car gate_list) 'empty_gate_list) (list 'empty_gate_list)]
+      [(equal? (car gate_list) 'empty_gate_list) gate_list]
       [(null? (cddr gate_list)) (list 'empty_gate_list)]
       [else (cons 'gate_list (cddr gate_list))]
     )
@@ -145,7 +145,7 @@
 (define input_list->first
   (lambda (input_list)
     (cond 
-      [(equal? (car input_list) 'empty_input_list) (list 'empty_input_list)]
+      [(equal? (car input_list) 'empty_input_list) input_list]
       [else (cadr input_list)]
     )
   )
@@ -157,7 +157,7 @@
 (define input_list->rest
   (lambda (input_list)
     (cond 
-      [(equal? (car input_list) 'empty_input_list) (list 'empty_input_list)]
+      [(equal? (car input_list) 'empty_input_list) input_list]
       [(null? (cddr input_list)) (list 'empty_input_list)]
       [else (cons 'input_list (cddr input_list))]
     )
@@ -235,19 +235,71 @@
   )
 )
 
-;; andMap
-;; Propósito: Promedimiento que recibe una función predicado unaria F, una lista L y retorna #t si todos
-;; los elementos cumplen el predicado, #f en caso contrario.
-;; <lista> := (<valor-de-scheme>)
+;; UNPARSEBNF
+;; Propósito: Procedimiento que recibe una estructura perteneciente a un DT y retorna la representación
+;; original de esta.
+;; <circuit> ::= '(circuit <gate_list>)
+;; <gate_list> ::= empty | <gate> <gate_list>
+;; <gate> ::= '(gate <gate id> <type> <input list>)
+;; <gate_id> ::= identificador de la compuerta
+;; <type> ::= and | or | not | xor
+;; <input_list> ::= empty | <bool> <input_list> | <gate_ref> <input_list>
+;; <gate ref> ::= identificador de otra compuerta
 
-(define andMap
-  (lambda (F L)
-    (if (null? L) 
-      #t
-      (and (F (car L)) (andMap F (cdr L)))
-    )
+(define (UNPARSEBNF exp)
+  (cond
+    [(circuit-exp? exp) 
+      (cases circuit-exp exp
+        (a-circuit (gate_list) (circuit (UNPARSEBNF gate_list)))
+      )
+    ]
+    
+    [(gate-list-exp? exp)
+      (cases gate-list-exp exp
+        (empty-gate-list () (gate_list '()) )
+        (a-gate-list (first rest) 
+          (gate_list (cons (UNPARSEBNF first) (cdr (UNPARSEBNF rest))))
+        )
+      )
+    ]
+
+    [(gate-exp? exp)
+      (cases gate-exp exp
+        (a-gate (id type input-list) (gate id (UNPARSEBNF type) (UNPARSEBNF input-list)))
+      )
+    ]
+
+    [(type-exp? exp)
+      (cases type-exp exp
+        (and-type () (type 'and))
+        (or-type () (type 'or))
+        (xor-type () (type 'xor))
+        (not-type () (type 'not))
+      )
+    ]
+
+    [(input-list-exp? exp)
+      (cases input-list-exp exp
+        (empty-input-list () (input_list '()))
+        (a-input-list (first rest) 
+          (input_list (cons (UNPARSEBNF first) (cdr (UNPARSEBNF rest))))
+        )
+      )
+    ]
+
+    [(input-exp? exp)
+      (cases input-exp exp
+        (bool-input (value) value)
+        (ref-input (id) id)
+      )
+    ]
+
+    [else 'error]
   )
 )
+
+(define first (ref-input 'A))
+(define rest (empty-input-list))
 
 (define circuit1 
   (circuit 
