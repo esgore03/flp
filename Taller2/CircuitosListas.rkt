@@ -93,7 +93,7 @@
 (define gate_list->first
   (lambda (gate_list)
     (cond 
-      [(equal? (car gate_list) 'empty_gate_list) (list 'empty_gate_list)]
+      [(equal? (car gate_list) 'empty_gate_list) gate_list]
       [else (cadr gate_list)]
     )
   )
@@ -105,7 +105,7 @@
 (define gate_list->rest
   (lambda (gate_list)
     (cond 
-      [(equal? (car gate_list) 'empty_gate_list) (list 'empty_gate_list)]
+      [(equal? (car gate_list) 'empty_gate_list) gate_list]
       [(null? (cddr gate_list)) (list 'empty_gate_list)]
       [else (cons 'gate_list (cddr gate_list))]
     )
@@ -145,7 +145,7 @@
 (define input_list->first
   (lambda (input_list)
     (cond 
-      [(equal? (car input_list) 'empty_input_list) (list 'empty_input_list)]
+      [(equal? (car input_list) 'empty_input_list) input_list]
       [else (cadr input_list)]
     )
   )
@@ -157,42 +157,12 @@
 (define input_list->rest
   (lambda (input_list)
     (cond 
-      [(equal? (car input_list) 'empty_input_list) (list 'empty_input_list)]
+      [(equal? (car input_list) 'empty_input_list) input_list]
       [(null? (cddr input_list)) (list 'empty_input_list)]
       [else (cons 'input_list (cddr input_list))]
     )
   )
-)
-
-;; Funciones Auxiliares
-
-;; myMap
-;; Propósito: Promedimiento que recibe una función unaria F, una lista L y retorna una lista con cada elemento
-;; de la lista de entrada evaluado en F.
-;; <lista> := (<función-unaria> <valor-de-scheme>)
-
-(define myMap
-  (lambda (F L)
-    (if (null? L) 
-      empty
-      (cons (F (car L)) (myMap F (cdr L)))
-    )
-  )
-)
-
-;; andMap
-;; Propósito: Promedimiento que recibe una función predicado unaria F, una lista L y retorna #t si todos
-;; los elementos cumplen el predicado, #f en caso contrario.
-;; <lista> := (<función-unaria> <valor-de-scheme>)
-
-(define andMap
-  (lambda (F L)
-    (if (null? L) 
-      #t
-      (and (F (car L)) (andMap F (cdr L)))
-    )
-  )
-)
+) 
 
 ;; Pruebas
 
