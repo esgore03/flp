@@ -36,3 +36,34 @@
 
 ;; Pruebas
 
+(define prueba1
+  (a-circuit
+   (a-gate-list
+    (a-gate 'G1 (not-type) (a-input-list (ref-input 'A) (empty-input-list)))
+    (empty-gate-list))))
+
+(define prueba2
+  (a-circuit
+   (a-gate-list
+    (a-gate 'G1 (and-type) (a-input-list (ref-input 'A) (a-input-list (ref-input 'B) (empty-input-list))))
+    (empty-gate-list))))
+
+(define prueba3
+  (a-circuit
+   (a-gate-list
+    (a-gate 'G1 (or-type) (a-input-list (ref-input 'A) (a-input-list (ref-input 'B) (empty-input-list))))
+    (a-gate-list
+     (a-gate 'G2 (not-type) (a-input-list (ref-input 'G1) (empty-input-list)))
+     (empty-gate-list)))))
+
+(define prueba4
+  (a-circuit
+   (a-gate-list
+    (a-gate 'G1 (or-type) (a-input-list (ref-input 'A) (a-input-list (ref-input 'B) (empty-input-list))))
+    (a-gate-list
+     (a-gate 'G2 (and-type) (a-input-list (ref-input 'A) (a-input-list (ref-input 'B) (empty-input-list))))
+     (a-gate-list
+      (a-gate 'G3 (not-type) (a-input-list (ref-input 'G2) (empty-input-list)))
+      (a-gate-list
+       (a-gate 'G4 (and-type) (a-input-list (ref-input 'G1) (a-input-list (ref-input 'G3) (empty-input-list))))
+       (empty-gate-list)))))))
