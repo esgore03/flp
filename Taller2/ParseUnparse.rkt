@@ -298,6 +298,8 @@
   )
 )
 
+;; Pruebas
+
 (define first (ref-input 'A))
 (define rest (empty-input-list))
 
