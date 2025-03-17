@@ -1,5 +1,7 @@
 #lang eopl
-
+;;Esteban Gomez Reyes 2330197
+;;Jhorman Mauricio Gomez 2326867
+;;Nicolas Salazar 2328060
 ;; Circuitos Lógicos Basados en Listas
 ;; Propósito: Implementar la interfaz del TAD de circuitos lógicos basandose en listas.
 ;; <circuit> ::= '(circuit <gate_list>)
