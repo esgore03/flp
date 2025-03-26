@@ -44,23 +44,24 @@
 
     (expression (number) lit-exp)
     (expression (identifier) var-exp)
-    (expression (primitive "(" (separated-list expression ",")")") primapp-exp)
+    (expression (primitive "("(separated-list expression ",")")") primapp-exp)
     (expression ("if" expression "then" expression "else" expression) if-exp)
     (expression ("let" (arbno identifier "=" expression) "in" expression) let-exp)
+    (expression (circuit) circuit-exp)
 
-    (circuit (gate-list) circuit-exp)
+    (circuit (gate-list) a-circuit)
 
-    (gate-list () empty-gate-list)
-    (gate-list (gate gate-list) gate-list-exp)
+    (gate-list ("") empty-gate-list)
+    (gate-list (gate gate-list) a-gate-list)
 
-    (gate (identifier type input-list) gate-exp)
+    (gate (type identifier input-list) a-gate)
 
     (type ("and") and-type)
     (type ("or") or-type)
     (type ("xor") xor-type)
     (type ("not") not-type)
 
-    (input-list () empty-input-list)
+    (input-list ("") empty-input-list)
     (input-list (bool input-list) bool-input-list)
     (input-list (identifier input-list) var-input-list)
 
