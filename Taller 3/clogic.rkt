@@ -48,22 +48,23 @@
     (expression ("if" expression "then" expression "else" expression) if-exp)
     (expression ("let" (arbno identifier "=" expression) "in" expression) let-exp)
     (expression (circuit) circuit-exp)
+    (expression ("True") true-bool-exp)
+    (expression ("False") false-bool-exp)
 
-    (circuit (gate-list) a-circuit)
+    (circuit ("circuit" "("gate-list")") a-circuit)
 
-    (gate-list ("") empty-gate-list)
-    (gate-list (gate gate-list) a-gate-list)
+    (gate-list ("empty-gate-list") empty-gate-list)
+    (gate-list ("gate-list" "("gate (arbno gate)")") a-gate-list)
 
-    (gate (type identifier input-list) a-gate)
+    (gate ("gate" "("identifier type input-list")") a-gate) 
 
     (type ("and") and-type)
     (type ("or") or-type)
     (type ("xor") xor-type)
     (type ("not") not-type)
 
-    (input-list ("") empty-input-list)
-    (input-list (bool input-list) bool-input-list)
-    (input-list (identifier input-list) var-input-list)
+    (input-list ("empty-input-list") empty-input-list)
+    (input-list ("input-list" "(" expression (arbno expression)")") an-input-list)
 
     (primitive ("+") add-prim)
     (primitive ("-") substract-prim)
@@ -73,9 +74,6 @@
     (primitive ("eval-circuit") eval-circuit-prim)
     (primitive ("connect-circuits") connect-circuits-prim)
     (primitive ("merge-circuits") merge-circuits-prim)
-
-    (bool ("True") true-bool)
-    (bool ("False") false-bool)
   )
 )
 
@@ -124,8 +122,8 @@
 (define init-env
   (lambda ()
     (extend-env
-     '(x y z)
-     '(4 2 5)
+     '(c1 c2)
+     '(circuit(empty-gate-list) circuit(gate-list(gate G1 and empty-input-list)))
      (empty-env)
     )
   )
@@ -141,7 +139,7 @@
       (primapp-exp (prim rands)
         (let 
           ((args (eval-rands rands env)))         
-          (apply-primitive prim args)
+          (apply-primitive prim args env)
         )
       )
       (if-exp (test-exp true-exp false-exp)
@@ -156,6 +154,9 @@
           (eval-expression body (extend-env ids args env))
         )
       )
+      (circuit-exp (circuit) circuit)
+      (true-bool-exp () #t)
+      (false-bool-exp () #f)
     )
   )
 )
@@ -174,13 +175,82 @@
 
 ;apply-primitive: <primitiva> <list-of-expression> -> numero
 (define apply-primitive
-  (lambda (prim args)
+  (lambda (prim args env)
     (cases primitive prim
       (add-prim () (+ (car args) (cadr args)))
       (substract-prim () (- (car args) (cadr args)))
       (mult-prim () (* (car args) (cadr args)))
       (incr-prim () (+ (car args) 1))
       (decr-prim () (- (car args) 1))
+      (eval-circuit-prim ()
+        (let ([circ (car args)])
+          (cases circuit circ
+            (a-circuit (gate-list) (eval-gate-list gate-list env))
+          )
+        )
+      )
+      (else 'meFalta)
+    )
+  )
+)
+
+;; función que procesa un gate-list aplicandole cases y obtieniendo los elementos de este para luego
+;; invocar a la función auxiliar auxRecursiveEvalGate.
+(define eval-gate-list
+  (lambda (glist env)
+    (cases gate-list glist
+      (empty-gate-list () 'empty-gate-list)
+      (a-gate-list (first rest)
+        (auxRecursiveEvalGate first rest env)
+      )
+    )
+  )
+)
+
+;; función auxiliar recursiva utilizada para la evaluación de un gate-list.
+(define auxRecursiveEvalGate
+  (lambda (first rest env)
+    (let* ([res (eval-gate first env)] [newEnv (extend-env (list (car res)) (list (cadr res)) env)])
+      (if (null? rest) 
+        (cadr res)
+        (auxRecursiveEvalGate (car rest) (cdr rest) newEnv)
+      )
+    )    
+  )
+)
+
+;; función que permite evaluar un gate de acuerdo a su tipo. Retorna una lista donde el primer elemento
+;; es el id del gate que se evaluó y el segundo elemento es el valor de verdad.
+(define eval-gate
+  (lambda (g env)
+    (cases gate g
+      (a-gate (id t inputList) 
+        (cases input-list inputList
+          (an-input-list (first rest) 
+            (cases type t
+              (and-type () (list id (and (eval-input-item first env) (eval-input-item (car rest) env))))
+              (or-type () (list id (or (eval-input-item first env) (eval-input-item (car rest) env))))
+              (not-type () (list id (not (eval-input-item first env))))
+              (xor-type () (list id (xor (eval-input-item first env) (eval-input-item (car rest) env))))
+            )
+          )
+          (empty-input-list () (eopl:error 'eval-gate "No evaluation for gate with no inputs ~g" g))
+        )
+      )
+    )
+  )
+)
+
+;; función que permite procesar los inputs de un input-list. Esta función es necesaria porque se requiere
+;; tener un control de que tipo de expressions pueden ser procesadas en un input-list puesto que por
+;; definición un input-list recibe cualquier tipo de expression.
+(define eval-input-item
+  (lambda (input env)
+    (cases expression input
+      (true-bool-exp () #t)
+      (false-bool-exp () #f)
+      (var-exp (id) (apply-env env id))
+      (else (eopl:error 'eval-input-item "Unsupported type for input-item ~i" input))
     )
   )
 )
@@ -188,10 +258,7 @@
 ;true-value?: determina si un valor dado corresponde a un valor booleano falso o verdadero
 (define true-value?
   (lambda (x)
-    (cond
-      [(equal? x "True") #t]
-      [(equal? x "False") #f]
-    )
+    (not (zero? x))
   )
 )
 
@@ -269,3 +336,27 @@
     )
   )
 )
+
+; función utilizada para implementar xor en nuestro lenguaje.
+(define xor 
+  (lambda (a b)
+    (and (or a b) (not (and a b)))
+  )
+)
+
+(interpretador)
+
+;; Ejemplos eval-circuit
+
+"let A = True C1 = circuit(gate-list(gate(G1 not input-list(A)))) in eval-circuit(C1)"
+
+"let A = True B = True C1 = circuit(gate-list(gate(G1 and input-list(A B)))) in eval-circuit(C1)"
+
+"let A = True B = True C1 = circuit(gate-list(gate(G1 or input-list(A B)) gate(G2 and input-list(A B)) gate(G3 not input-list(G2)) gate(G4 and input-list(G1 G3)))) in eval-circuit(C1)"
+"let A = False B = True C1 = circuit(gate-list(gate(G1 or input-list(A B)) gate(G2 and input-list(A B)) gate(G3 not input-list(G2)) gate(G4 and input-list(G1 G3)))) in eval-circuit(C1)"
+"let A = False B = False C1 = circuit(gate-list(gate(G1 or input-list(A B)) gate(G2 and input-list(A B)) gate(G3 not input-list(G2)) gate(G4 and input-list(G1 G3)))) in eval-circuit(C1)"
+"let A = True B = False C1 = circuit(gate-list(gate(G1 or input-list(A B)) gate(G2 and input-list(A B)) gate(G3 not input-list(G2)) gate(G4 and input-list(G1 G3)))) in eval-circuit(C1)"
+
+;; Ejemplos connect-circuits
+
+;; Ejemplos merge-circuits
