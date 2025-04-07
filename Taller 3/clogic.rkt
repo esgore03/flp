@@ -56,7 +56,7 @@
     (gate-list ("empty-gate-list") empty-gate-list)
     (gate-list ("gate-list" "("gate (arbno gate)")") a-gate-list)
 
-    (gate ("gate" "("identifier type input-list")") a-gate) 
+    (gate ("gate" "("identifier type input-list")") a-gate)
 
     (type ("and") and-type)
     (type ("or") or-type)
@@ -122,8 +122,8 @@
 (define init-env
   (lambda ()
     (extend-env
-     '(c1 c2)
-     '(circuit(empty-gate-list) circuit(gate-list(gate G1 and empty-input-list)))
+     '(c1)
+     (list (a-circuit (empty-gate-list)))
      (empty-env)
     )
   )
@@ -184,14 +184,12 @@
       (decr-prim () (- (car args) 1))
       (eval-circuit-prim ()
         (let ([circ (car args)])
-          (cases circuit circ
-            (a-circuit (gate-list) (eval-gate-list gate-list env))
-          )
+          (eval-gate-list (circuit->gate-list circ) env)
         )
       )
       (connect-circuits-prim ()
-        (let ([c1 (car args)] [c2 (cadr args)])
-          (empty)
+        (let ([c1 (car args)] [idToReplace (caddr args)])
+          (replaceIdentifier (returnLastIdentifier c1) idToReplace)
         )
       )
       (else 'meFalta)
@@ -199,13 +197,79 @@
   )
 )
 
+(define circuit->gate-list
+  (lambda (circ)
+    (cases circuit circ
+      (a-circuit (gate-list) gate-list)
+    )
+  )
+)
+
+(define gate-list->first
+  (lambda (glist)
+    (cases gate-list glist
+      (empty-gate-list () empty)
+      (a-gate-list (first rest) first)
+    )
+  )
+)
+
+(define gate-list->rest
+  (lambda (glist)
+    (cases gate-list glist
+      (empty-gate-list () empty)
+      (a-gate-list (first rest) rest)
+    )
+  )
+)
+
+(define gate->identifier
+  (lambda (g)
+    (cases gate g
+      (a-gate (id type input-list) id)
+    )
+  )
+)
+
+(define returnLastIdentifier
+  (lambda (circ)
+    (let* ([glist (circuit->gate-list circ)] [first (gate-list->first glist)] [rest (gate-list->rest glist)])
+      (if (null? first)
+        (eopl:error 'returnLastIdentifier "No last identifier for an empty circuit")
+        (returnLastIdentifierAux first rest)
+      )
+    )
+  )
+)
+
+(define returnLastIdentifierAux
+  (lambda (first rest)
+    (if (null? rest)
+      (gate->identifier first)
+      (returnLastIdentifierAux (car rest) (cdr rest))
+    )
+  )
+)
+
+(define replaceIdentifier 
+  (lambda (newId oldId)
+    empty
+  )
+)
+
+(define compareAndReplaceIdentifiers
+  (lambda (g id)
+    empty
+  )
+)
+
 ;; función que procesa un gate-list aplicandole cases y obtieniendo los elementos de este para luego
 ;; invocar a la función auxiliar auxRecursiveEvalGate.
 (define eval-gate-list
   (lambda (glist env)
-    (cases gate-list glist
-      (empty-gate-list () 'empty-gate-list)
-      (a-gate-list (first rest)
+    (let ([first (gate-list->first glist)] [rest (gate-list->rest glist)])
+      (if (null? first)
+        (eopl:error 'eval-gate-list "No evaluation for gate-list with no gates")
         (auxRecursiveEvalGate first rest env)
       )
     )
@@ -239,7 +303,7 @@
               (xor-type () (list id (xor (eval-input-item first env) (eval-input-item (car rest) env))))
             )
           )
-          (empty-input-list () (eopl:error 'eval-gate "No evaluation for gate with no inputs ~g" g))
+          (empty-input-list () (eopl:error 'eval-gate "No evaluation for gate with no inputs"))
         )
       )
     )
@@ -255,7 +319,7 @@
       (true-bool-exp () #t)
       (false-bool-exp () #f)
       (var-exp (id) (apply-env env id))
-      (else (eopl:error 'eval-input-item "Unsupported type for input-item ~i" input))
+      (else (eopl:error 'eval-input-item "Unsupported type for input-item"))
     )
   )
 )
@@ -352,6 +416,8 @@
 (interpretador)
 
 ;; Ejemplos eval-circuit
+
+"let C1 = circuit(empty-gate-list) in eval-circuit(C1)"
 
 "let A = True C1 = circuit(gate-list(gate(G1 not input-list(A)))) in eval-circuit(C1)"
 
