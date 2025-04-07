@@ -48,15 +48,17 @@
     (expression ("if" expression "then" expression "else" expression) if-exp)
     (expression ("let" (arbno identifier "=" expression) "in" expression) let-exp)
     (expression (circuit) circuit-exp)
+    (expression (type) type-exp)
+    (expression ("'" identifier) connect-circuits-identifier-exp)
     (expression ("True") true-bool-exp)
     (expression ("False") false-bool-exp)
 
-    (circuit ("circuit" "("gate-list")") a-circuit)
+    (circuit ("circuit" "(" gate-list ")") a-circuit)
 
     (gate-list ("empty-gate-list") empty-gate-list)
-    (gate-list ("gate-list" "("gate (arbno gate)")") a-gate-list)
+    (gate-list ("gate-list" "(" gate (arbno gate) ")") a-gate-list)
 
-    (gate ("gate" "("identifier type input-list")") a-gate)
+    (gate ("gate" "(" identifier type input-list ")") a-gate)
 
     (type ("and") and-type)
     (type ("or") or-type)
@@ -64,7 +66,7 @@
     (type ("not") not-type)
 
     (input-list ("empty-input-list") empty-input-list)
-    (input-list ("input-list" "(" expression (arbno expression)")") an-input-list)
+    (input-list ("input-list" "(" expression (arbno expression) ")") an-input-list)
 
     (primitive ("+") add-prim)
     (primitive ("-") substract-prim)
@@ -155,6 +157,7 @@
         )
       )
       (circuit-exp (circuit) circuit)
+      (type-exp (type) type)
       (true-bool-exp () #t)
       (false-bool-exp () #f)
       (else exp)
@@ -193,7 +196,50 @@
           (replaceIdentifier (returnLastIdentifier c1) idToReplace)
         )
       )
-      (else 'meFalta)
+      (merge-circuits-prim ()
+        (let ([c1 (car args)] [c2 (cadr args)] [type (caddr args)] [id (cadddr args)] )
+          (merge-circuits-aux c1 c2 type id)
+        )
+      )
+    )
+  )
+)
+
+(define merge-circuits-aux
+  (lambda (c1 c2 type id)
+    (let 
+      (
+        [c1FirstGate (gate-list->first (circuit->gate-list c1))] 
+        [c1RestGates (gate-list->rest(circuit->gate-list c1))]
+        [c2FirstGate (gate-list->first (circuit->gate-list c2))]
+        [c2RestGates (gate-list->rest(circuit->gate-list c2))]
+        [gate-id (connect-circuits-identifier-exp->id id)]
+      )
+      (a-circuit 
+        (a-gate-list 
+          c1FirstGate
+          (appendAux 
+            (appendAux c1RestGates (cons c2FirstGate c2RestGates)) 
+            (list 
+              (a-gate gate-id type 
+                (an-input-list 
+                  (var-exp (returnLastIdentifier c1)) 
+                  (list (var-exp (returnLastIdentifier c2)))
+                )
+              )
+            )
+          )
+        )
+      )
+    )
+  )
+)
+
+(define connect-circuits-identifier-exp->id
+  (lambda (id)
+    (cases expression id
+      (connect-circuits-identifier-exp (identifier) identifier)
+      (else (eopl:error 'connect-circuits-identifier-exp->id "Unsupported expression"))
     )
   )
 )
@@ -414,6 +460,21 @@
   )
 )
 
+;; appendAux:
+;; Propósito:
+;; L1, L2 -> L1 + L2: Procedimiento que toma dos listas y
+;; retorna la concatenación de ambas.
+;; <lista> := ()
+;;         := (<valor-de-scheme> <lista>)
+
+(define appendAux
+  (lambda (L1 L2)
+    (if (null? L1) L2
+      (cons (car L1) (appendAux (cdr L1) L2))
+    )
+  )
+)
+
 (interpretador)
 
 ;; Ejemplos eval-circuit
@@ -432,3 +493,5 @@
 ;; Ejemplos connect-circuits
 
 ;; Ejemplos merge-circuits
+
+"let C1 = circuit(gate-list(gate(G1 not input-list(A)))) C2 = circuit(gate-list(gate(G2 and input-list(A B)))) in merge-circuits(C1, C2, or, 'G3)"
