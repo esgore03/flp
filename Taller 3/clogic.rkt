@@ -158,6 +158,7 @@
       )
       (circuit-exp (circuit) circuit)
       (type-exp (type) type)
+      (connect-circuits-identifier-exp (identifier) identifier)
       (true-bool-exp () #t)
       (false-bool-exp () #f)
       (else exp)
@@ -192,181 +193,15 @@
         )
       )
       (connect-circuits-prim ()
-        (let ([c1 (car args)] [idToReplace (caddr args)])
-          (replaceIdentifier (returnLastIdentifier c1) idToReplace)
+        (let ([c1 (car args)] [c2 (cadr args)] [old-id (caddr args)])
+          (connect-circuits c1 c2 old-id)
         )
       )
       (merge-circuits-prim ()
         (let ([c1 (car args)] [c2 (cadr args)] [type (caddr args)] [id (cadddr args)] )
-          (merge-circuits-aux c1 c2 type id)
+          (merge-circuits c1 c2 type id)
         )
       )
-    )
-  )
-)
-
-(define merge-circuits-aux
-  (lambda (c1 c2 type id)
-    (let 
-      (
-        [c1FirstGate (gate-list->first (circuit->gate-list c1))] 
-        [c1RestGates (gate-list->rest(circuit->gate-list c1))]
-        [c2FirstGate (gate-list->first (circuit->gate-list c2))]
-        [c2RestGates (gate-list->rest(circuit->gate-list c2))]
-        [gate-id (connect-circuits-identifier-exp->id id)]
-      )
-      (a-circuit 
-        (a-gate-list 
-          c1FirstGate
-          (appendAux 
-            (appendAux c1RestGates (cons c2FirstGate c2RestGates)) 
-            (list 
-              (a-gate gate-id type 
-                (an-input-list 
-                  (var-exp (returnLastIdentifier c1)) 
-                  (list (var-exp (returnLastIdentifier c2)))
-                )
-              )
-            )
-          )
-        )
-      )
-    )
-  )
-)
-
-(define connect-circuits-identifier-exp->id
-  (lambda (id)
-    (cases expression id
-      (connect-circuits-identifier-exp (identifier) identifier)
-      (else (eopl:error 'connect-circuits-identifier-exp->id "Unsupported expression"))
-    )
-  )
-)
-
-(define circuit->gate-list
-  (lambda (circ)
-    (cases circuit circ
-      (a-circuit (gate-list) gate-list)
-    )
-  )
-)
-
-(define gate-list->first
-  (lambda (glist)
-    (cases gate-list glist
-      (empty-gate-list () empty)
-      (a-gate-list (first rest) first)
-    )
-  )
-)
-
-(define gate-list->rest
-  (lambda (glist)
-    (cases gate-list glist
-      (empty-gate-list () empty)
-      (a-gate-list (first rest) rest)
-    )
-  )
-)
-
-(define gate->identifier
-  (lambda (g)
-    (cases gate g
-      (a-gate (id type input-list) id)
-    )
-  )
-)
-
-(define returnLastIdentifier
-  (lambda (circ)
-    (let* ([glist (circuit->gate-list circ)] [first (gate-list->first glist)] [rest (gate-list->rest glist)])
-      (if (null? first)
-        (eopl:error 'returnLastIdentifier "No last identifier for an empty circuit")
-        (returnLastIdentifierAux first rest)
-      )
-    )
-  )
-)
-
-(define returnLastIdentifierAux
-  (lambda (first rest)
-    (if (null? rest)
-      (gate->identifier first)
-      (returnLastIdentifierAux (car rest) (cdr rest))
-    )
-  )
-)
-
-(define replaceIdentifier 
-  (lambda (newId oldId)
-    empty
-  )
-)
-
-(define compareAndReplaceIdentifiers
-  (lambda (g id)
-    empty
-  )
-)
-
-;; función que procesa un gate-list aplicandole cases y obtieniendo los elementos de este para luego
-;; invocar a la función auxiliar auxRecursiveEvalGate.
-(define eval-gate-list
-  (lambda (glist env)
-    (let ([first (gate-list->first glist)] [rest (gate-list->rest glist)])
-      (if (null? first)
-        (eopl:error 'eval-gate-list "No evaluation for gate-list with no gates")
-        (auxRecursiveEvalGate first rest env)
-      )
-    )
-  )
-)
-
-;; función auxiliar recursiva utilizada para la evaluación de un gate-list.
-(define auxRecursiveEvalGate
-  (lambda (first rest env)
-    (let* ([res (eval-gate first env)] [newEnv (extend-env (list (car res)) (list (cadr res)) env)])
-      (if (null? rest) 
-        (cadr res)
-        (auxRecursiveEvalGate (car rest) (cdr rest) newEnv)
-      )
-    )    
-  )
-)
-
-;; función que permite evaluar un gate de acuerdo a su tipo. Retorna una lista donde el primer elemento
-;; es el id del gate que se evaluó y el segundo elemento es el valor de verdad.
-(define eval-gate
-  (lambda (g env)
-    (cases gate g
-      (a-gate (id t inputList) 
-        (cases input-list inputList
-          (an-input-list (first rest) 
-            (cases type t
-              (and-type () (list id (and (eval-input-item first env) (eval-input-item (car rest) env))))
-              (or-type () (list id (or (eval-input-item first env) (eval-input-item (car rest) env))))
-              (not-type () (list id (not (eval-input-item first env))))
-              (xor-type () (list id (xor (eval-input-item first env) (eval-input-item (car rest) env))))
-            )
-          )
-          (empty-input-list () (eopl:error 'eval-gate "No evaluation for gate with no inputs"))
-        )
-      )
-    )
-  )
-)
-
-;; función que permite procesar los inputs de un input-list. Esta función es necesaria porque se requiere
-;; tener un control de que tipo de expressions pueden ser procesadas en un input-list puesto que por
-;; definición un input-list recibe cualquier tipo de expression.
-(define eval-input-item
-  (lambda (input env)
-    (cases expression input
-      (true-bool-exp () #t)
-      (false-bool-exp () #f)
-      (var-exp (id) (apply-env env id))
-      (else (eopl:error 'eval-input-item "Unsupported type for input-item"))
     )
   )
 )
@@ -453,6 +288,239 @@
   )
 )
 
+; función auxiliar que conecta dos circuitos de forma secuencial, es decir, se cambia alguna entrada
+; del circuito 2 por la salida del circuito 1. La entrada a cambiar es especificada por el usuario.
+(define connect-circuits
+  (lambda (c1 c2 old-id)
+    (let 
+      (
+        [c1-first-gate (gate-list->first (circuit->gate-list c1))] 
+        [c1-rest-gates (gate-list->rest(circuit->gate-list c1))]
+        [c2-first-gate (gate-list->first (circuit->gate-list c2))]
+        [c2-rest-gates (gate-list->rest(circuit->gate-list c2))]
+        [new-id (return-last-identifier c1)]
+      )
+      (if (or (null? c1-first-gate) (null? c2-first-gate))
+        (eopl:error 'connect-circuits "No connection for a non empty circuit and an empty circuit")
+        (a-circuit
+          (a-gate-list
+            c1-first-gate
+            (append-aux c1-rest-gates (map (lambda (g) (replace-gate-input-list g old-id new-id)) (cons c2-first-gate c2-rest-gates)))
+          )
+        )
+      )
+    )
+  )
+)
+
+; función que reemplaza el input-list de un gate por el resultado de llamar a replace-input-list con
+; el input-list del gate, el id a reemplazar y el id por el cual se va a reemplazar.
+(define replace-gate-input-list
+  (lambda (g old-id new-id)
+    (cases gate g
+      (a-gate (id type input-list)
+        (a-gate id type (replace-input-list input-list old-id new-id))
+      )
+    )
+  )
+)
+
+; función que reemplaza un input de un input-list por el resultado de llamar a replace-input con
+; el input del input-list, el id a reemplazar y el id por el cual se va a reemplazar.
+(define replace-input-list
+  (lambda (i-list old-id new-id)
+    (cases input-list i-list
+      (empty-input-list () i-list)
+      (an-input-list (first rest)
+        (an-input-list
+          (replace-input first old-id new-id)
+          (map (lambda (i) (replace-input i old-id new-id)) rest)
+        )
+      )
+    )
+  )
+)
+
+; función que reemplaza el input como tal. Si el input equivale al id que se va a reemplazar entonces
+; se reemplaza por el id a reemplazar.
+(define replace-input
+  (lambda (input old-id new-id)
+    (cases expression input
+      (var-exp (id)
+        (if (eqv? id old-id)
+          (var-exp new-id)
+          input
+        )
+      )
+      (else input)
+    )
+  )
+)
+
+; función auxiliar que conecta dos circuitos de forma paralela sobre un gate de tipo or | and | xor | not
+; y con identificador especificado por el usuario
+(define merge-circuits
+  (lambda (c1 c2 type id)
+    (let 
+      (
+        [c1-first-gate (gate-list->first (circuit->gate-list c1))] 
+        [c1-rest-gates (gate-list->rest(circuit->gate-list c1))]
+        [c2-first-gate (gate-list->first (circuit->gate-list c2))]
+        [c2-rest-gates (gate-list->rest(circuit->gate-list c2))]
+      )
+      (if (or (null? c1-first-gate) (null? c2-first-gate))
+        (eopl:error 'merge-circuits "No merge for a non empty circuit and an empty circuit")
+        (a-circuit 
+          (a-gate-list 
+            c1-first-gate
+            (append-aux 
+              (append-aux c1-rest-gates (cons c2-first-gate c2-rest-gates)) 
+              (list 
+                (a-gate id type 
+                  (an-input-list 
+                    (var-exp (return-last-identifier c1)) 
+                    (list (var-exp (return-last-identifier c2)))
+                  )
+                )
+              )
+            )
+          )
+        )
+      )
+    )
+  )
+)
+
+; extractor que a partir de un circuito retorna su gate-list
+(define circuit->gate-list
+  (lambda (circ)
+    (cases circuit circ
+      (a-circuit (gate-list) gate-list)
+    )
+  )
+)
+
+; extractor que a partir de un gate-list retorna su primer gate
+(define gate-list->first
+  (lambda (glist)
+    (cases gate-list glist
+      (empty-gate-list () empty)
+      (a-gate-list (first rest) first)
+    )
+  )
+)
+
+; extractor que a partir de un gate-list retorna el resto de gates
+(define gate-list->rest
+  (lambda (glist)
+    (cases gate-list glist
+      (empty-gate-list () empty)
+      (a-gate-list (first rest) rest)
+    )
+  )
+)
+
+; extractor que a partir de un gate retorna su identificador
+(define gate->identifier
+  (lambda (g)
+    (cases gate g
+      (a-gate (id type input-list) id)
+    )
+  )
+)
+
+; extractor que a partir de un gate retorna su type
+(define gate->type
+  (lambda (g)
+    (cases gate g
+      (a-gate (id type input-list) type)
+    )
+  )
+)
+
+; función que a partir de un circuito retorna el identificador de su último gate
+(define return-last-identifier
+  (lambda (circ)
+    (let* ([glist (circuit->gate-list circ)] [first (gate-list->first glist)] [rest (gate-list->rest glist)])
+      (if (null? first)
+        (eopl:error 'return-last-identifier "No last identifier for an empty circuit")
+        (return-last-identifier-aux first rest)
+      )
+    )
+  )
+)
+
+; función auxiliar de return-last-identifier utilizada para recursión
+(define return-last-identifier-aux
+  (lambda (first rest)
+    (if (null? rest)
+      (gate->identifier first)
+      (return-last-identifier-aux (car rest) (cdr rest))
+    )
+  )
+)
+
+; función que procesa un gate-list aplicandole cases y obtieniendo los elementos de este para luego
+; invocar a la función auxiliar eval-gate-list-aux.
+(define eval-gate-list
+  (lambda (glist env)
+    (let ([first (gate-list->first glist)] [rest (gate-list->rest glist)])
+      (if (null? first)
+        (eopl:error 'eval-gate-list "No evaluation for gate-list with no gates")
+        (eval-gate-list-aux first rest env)
+      )
+    )
+  )
+)
+
+; función auxiliar recursiva utilizada para la evaluación de un gate-list.
+(define eval-gate-list-aux
+  (lambda (first rest env)
+    (let* ([res (eval-gate first env)] [newEnv (extend-env (list (car res)) (list (cadr res)) env)])
+      (if (null? rest) 
+        (cadr res)
+        (eval-gate-list-aux (car rest) (cdr rest) newEnv)
+      )
+    )    
+  )
+)
+
+; función que permite evaluar un gate de acuerdo a su tipo. Retorna una lista donde el primer elemento
+; es el id del gate que se evaluó y el segundo elemento es el valor de verdad.
+(define eval-gate
+  (lambda (g env)
+    (cases gate g
+      (a-gate (id t inputList) 
+        (cases input-list inputList
+          (an-input-list (first rest) 
+            (cases type t
+              (and-type () (list id (and (eval-input-item first env) (eval-input-item (car rest) env))))
+              (or-type () (list id (or (eval-input-item first env) (eval-input-item (car rest) env))))
+              (not-type () (list id (not (eval-input-item first env))))
+              (xor-type () (list id (xor (eval-input-item first env) (eval-input-item (car rest) env))))
+            )
+          )
+          (empty-input-list () (eopl:error 'eval-gate "No evaluation for gate with no inputs"))
+        )
+      )
+    )
+  )
+)
+
+; función que permite procesar los inputs de un input-list. Esta función es necesaria porque se requiere
+; tener un control de que tipo de expressions pueden ser procesadas en un input-list puesto que por
+; definición un input-list recibe cualquier tipo de expression.
+(define eval-input-item
+  (lambda (input env)
+    (cases expression input
+      (true-bool-exp () #t)
+      (false-bool-exp () #f)
+      (var-exp (id) (apply-env env id))
+      (else (eopl:error 'eval-input-item "Unsupported type for input-item"))
+    )
+  )
+)
+
 ; función utilizada para implementar xor en nuestro lenguaje.
 (define xor 
   (lambda (a b)
@@ -460,17 +528,17 @@
   )
 )
 
-;; appendAux:
+;; append-aux:
 ;; Propósito:
 ;; L1, L2 -> L1 + L2: Procedimiento que toma dos listas y
 ;; retorna la concatenación de ambas.
 ;; <lista> := ()
 ;;         := (<valor-de-scheme> <lista>)
 
-(define appendAux
+(define append-aux
   (lambda (L1 L2)
     (if (null? L1) L2
-      (cons (car L1) (appendAux (cdr L1) L2))
+      (cons (car L1) (append-aux (cdr L1) L2))
     )
   )
 )
@@ -481,9 +549,15 @@
 
 "let C1 = circuit(empty-gate-list) in eval-circuit(C1)"
 
+; 3.1
+
 "let A = True C1 = circuit(gate-list(gate(G1 not input-list(A)))) in eval-circuit(C1)"
 
+; 3.2
+
 "let A = True B = True C1 = circuit(gate-list(gate(G1 and input-list(A B)))) in eval-circuit(C1)"
+
+; 3.3
 
 "let A = True B = True C1 = circuit(gate-list(gate(G1 or input-list(A B)) gate(G2 and input-list(A B)) gate(G3 not input-list(G2)) gate(G4 and input-list(G1 G3)))) in eval-circuit(C1)"
 "let A = False B = True C1 = circuit(gate-list(gate(G1 or input-list(A B)) gate(G2 and input-list(A B)) gate(G3 not input-list(G2)) gate(G4 and input-list(G1 G3)))) in eval-circuit(C1)"
@@ -492,6 +566,40 @@
 
 ;; Ejemplos connect-circuits
 
+; connect 3.1 y 3.2 en A
+
+"let C1 = circuit(gate-list(gate(G1 not input-list(A)))) C2 = circuit(gate-list(gate(G2 and input-list(A B)))) in connect-circuits(C1, C2, 'A)"
+
+; connect 3.1 y 3.3 en A
+
+"let C1 = circuit(gate-list(gate(G1 not input-list(A)))) C2 = circuit(gate-list(gate(G2 or input-list(A B)) gate(G3 and input-list(A B)) gate(G4 not input-list(G3)) gate(G5 and input-list(G2 G4)))) in connect-circuits(C1, C2, 'A)"
+
+; connect 3.2 y 3.3 en A
+
+"let C1 = circuit(gate-list(gate(G1 and input-list(A B)))) C2 = circuit(gate-list(gate(G2 or input-list(A B)) gate(G3 and input-list(A B)) gate(G4 not input-list(G3)) gate(G5 and input-list(G2 G4)))) in connect-circuits(C1, C2, 'A)"
+
+; connect 3.1 y 3.2 en B
+
+"let C1 = circuit(gate-list(gate(G1 not input-list(A)))) C2 = circuit(gate-list(gate(G2 and input-list(A B)))) in connect-circuits(C1, C2, and, 'B)"
+
+; connect 3.1 y 3.3 en B
+
+"let C1 = circuit(gate-list(gate(G1 not input-list(A)))) C2 = circuit(gate-list(gate(G2 or input-list(A B)) gate(G3 and input-list(A B)) gate(G4 not input-list(G3)) gate(G5 and input-list(G2 G4)))) in connect-circuits(C1, C2, 'B)"
+
+; connect 3.2 y 3.3 en B
+
+"let C1 = circuit(gate-list(gate(G1 and input-list(A B)))) C2 = circuit(gate-list(gate(G2 or input-list(A B)) gate(G3 and input-list(A B)) gate(G4 not input-list(G3)) gate(G5 and input-list(G2 G4)))) in connect-circuits(C1, C2, 'B)"
+
 ;; Ejemplos merge-circuits
 
-"let C1 = circuit(gate-list(gate(G1 not input-list(A)))) C2 = circuit(gate-list(gate(G2 and input-list(A B)))) in merge-circuits(C1, C2, or, 'G3)"
+; merge 3.1 y 3.2
+
+"let C1 = circuit(gate-list(gate(G1 not input-list(A)))) C2 = circuit(gate-list(gate(G2 and input-list(A B)))) in merge-circuits(C1, C2, and, 'G3)"
+
+; merge 3.1 y 3.3
+
+"let C1 = circuit(gate-list(gate(G1 not input-list(A)))) C2 = circuit(gate-list(gate(G2 or input-list(A B)) gate(G3 and input-list(A B)) gate(G4 not input-list(G3)) gate(G5 and input-list(G2 G4)))) in merge-circuits(C1, C2, or, 'G6)"
+
+; merge circuitos anteriores
+
+"let C1 = circuit(gate-list(gate(G1 not input-list(A)))) C2 = circuit(gate-list(gate(G2 and input-list(A B)))) C3 = circuit(gate-list(gate(G4 not input-list(A)))) C4 = circuit(gate-list(gate(G5 or input-list(A B)) gate(G6 and input-list(A B)) gate(G7 not input-list(G6)) gate(G8 and input-list(G5 G7)))) in merge-circuits(merge-circuits(C1, C2, and, 'G3), merge-circuits(C3, C4, or, 'G9), xor, 'G10)"
