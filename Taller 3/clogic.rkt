@@ -157,6 +157,7 @@
       (circuit-exp (circuit) circuit)
       (true-bool-exp () #t)
       (false-bool-exp () #f)
+      (else exp)
     )
   )
 )
